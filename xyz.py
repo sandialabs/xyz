@@ -1,37 +1,26 @@
 #!/usr/bin/env python
-'''
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains certain rights in this software.
+# Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC 
+# (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S. 
+# Government retains certain rights in this software.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-(MIT license)
-
-This software also incorporates some Python Software Foundation License code
-
-
-extract metadata from zipfiles, including metadata from deflate compression
-
-format for wide terminal, dump hex strings in format aiding signature writing and understanding file format
-
-designed to be run under python 2 (and relies on python 2 zip libaries for basic parsing)
+#This software also incorporates some Python Software Foundation License code
 
 '''
+extract metadata from zipfiles
+'''
+from __future__ import print_function, division
 import os
 import sys
 import zipfile
@@ -45,8 +34,6 @@ import traceback
 import zlib
 
 '''
-   From Zip specification, https://www.loc.gov/preservation/digital/formats/digformatspecs/APPNOTE(20120901)_Version_6.3.3.txt
-
    4.4.5 compression method: (2 bytes)
 
         0 - The file is stored (no compression)
@@ -324,16 +311,16 @@ def label_compress_flags(data, method, flags):
     data_meta = []
     if data:
         if method == 8 and not (flags & 0x0001):
-            if ord(data[0]) & 0x06 == 0x00:
+            if ord(data[0:1]) & 0x06 == 0x00:
                 data_meta.append("deflate_nocompress")
-            if ord(data[0]) & 0x06 == 0x02:
+            if ord(data[0:1]) & 0x06 == 0x02:
                 data_meta.append("deflate_fixed")
-            if ord(data[0]) & 0x06 == 0x04:
+            if ord(data[0:1]) & 0x06 == 0x04:
                 data_meta.append("deflate_dynamic")
-            if ord(data[0]) & 0x06 == 0x06:
+            if ord(data[0:1]) & 0x06 == 0x06:
                 data_meta.append("deflate_reserved")
             
-            if ord(data[0]) & 0x01:
+            if ord(data[0:1]) & 0x01:
                 data_meta.append("deflate_lastblock")
             else:
                 data_meta.append("deflate_moreblocks")
@@ -486,17 +473,13 @@ def label_external_attributes_dos(attr):
     
     
 '''
-https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
+https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+
 '''
 
 
 '''
 from python 3 Lib/stat.py
-
-begin Python Software Foundation License code
-
-Copyright 2001-2020 Python Software Foundation; All Rights Reserved
-
 '''
 S_IFDIR  = 0o040000  # directory
 S_IFCHR  = 0o020000  # character device
@@ -564,11 +547,8 @@ def filemode(mode):
         else:
             perm.append("-")
     return "".join(perm)
-
-'''
-End Python Software Foundation License code
-'''   
-  
+    
+    
 
         
 def label_external_attributes_posix(attr):
@@ -729,7 +709,7 @@ def parse_extra_data(data, type):
             tuples.append(('zip64_volume',struct.unpack("<L",data[24:28])[0]))
             tokens.append((binascii.hexlify(data[24:28])))
     if type == "000a":
-        if data_len >= 32 and data[:8] == "\x00\x00\x00\x00\x01\x00\x18\x00":
+        if data_len >= 32 and data[:8] == b"\x00\x00\x00\x00\x01\x00\x18\x00":
             tuples.append(('ntfs_reserved', ""))
             tokens.append((binascii.hexlify(data[0:4])))
             tuples.append(('ntfs_attr_type', "1"))
@@ -737,18 +717,18 @@ def parse_extra_data(data, type):
             tuples.append(('ntfs_attr_size', "24"))
             tokens.append((binascii.hexlify(data[6:8])))
             #fields['ntfs_mtime'] = (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[8:16])[0]/10)).isoformat()
-            tuples.append(('ntfs_mtime', (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[8:16])[0]/10)).isoformat()))
+            tuples.append(('ntfs_mtime', (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[8:16])[0]//10)).isoformat()))
             tokens.append((binascii.hexlify(data[8:16])))
             #fields['ntfs_atime'] = (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[16:24])[0]/10)).isoformat()
-            tuples.append(('ntfs_atime', (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[16:24])[0]/10)).isoformat()))
+            tuples.append(('ntfs_atime', (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[16:24])[0]//10)).isoformat()))
             tokens.append((binascii.hexlify(data[16:24])))
             #fields['ntfs_ctime'] = (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[24:32])[0]/10)).isoformat()
-            tuples.append(('ntfs_ctime', (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[24:32])[0]/10)).isoformat()))
+            tuples.append(('ntfs_ctime', (datetime.datetime(1601, 1, 1, 0, 0, 0) + datetime.timedelta(microseconds=struct.unpack("<Q",data[24:32])[0]//10)).isoformat()))
             tokens.append((binascii.hexlify(data[24:32])))
     if type == "5455":
         if data_len >= 5:
             ts_types = []
-            flags = ord(data[0])
+            flags = ord(data[0:1])
             if flags & 0x01:
                 ts_types.append("mtime")
             if flags & 0x02:
@@ -757,7 +737,7 @@ def parse_extra_data(data, type):
                 ts_types.append("ctime")
 
             tuples.append(('time_flags',ts_types))
-            tokens.append((binascii.hexlify(data[0])))
+            tokens.append((binascii.hexlify(data[0:1])))
             if len(ts_types) >= 1:
                 #fields["time_" + ts_types[0]] = datetime.datetime.utcfromtimestamp(struct.unpack("<I",data[1:5])[0]).isoformat()
                 tuples.append(("time_" + ts_types[0],datetime.datetime.utcfromtimestamp(struct.unpack("<I",data[1:5])[0]).isoformat()))
@@ -771,31 +751,31 @@ def parse_extra_data(data, type):
                 tuples.append(("time_" + ts_types[2], datetime.datetime.utcfromtimestamp(struct.unpack("<I",data[9:13])[0]).isoformat()))
                 tokens.append((binascii.hexlify(data[9:13])))
     if type == "7875":
-        if data_len >= 6 and data[0] == "\x01":
-            tuples.append(('unix_version', ord(data[0])))
-            tokens.append((binascii.hexlify(data[0])))
-            tuples.append(('unix_uid_size', ord(data[1])))
-            tokens.append((binascii.hexlify(data[1])))
-            if ord(data[1]) == 4:
+        if data_len >= 6 and data[0] == b"\x01":
+            tuples.append(('unix_version', ord(data[0:1])))
+            tokens.append((binascii.hexlify(data[0:1])))
+            tuples.append(('unix_uid_size', ord(data[1:2])))
+            tokens.append((binascii.hexlify(data[1:2])))
+            if ord(data[1:2]) == 4:
                 #fields['unix_uid'] = struct.unpack("<I",data[2:6])[0]
                 tuples.append(('unix_uid',struct.unpack("<I",data[2:6])[0]))
                 tokens.append((binascii.hexlify(data[2:6])))
-            tuples.append(('unix_guid_size', ord(data[6])))
-            tokens.append((binascii.hexlify(data[6])))
-            if data_len >= 11 and ord(data[6]) == 4:
+            tuples.append(('unix_guid_size', ord(data[6:7])))
+            tokens.append((binascii.hexlify(data[6:7])))
+            if data_len >= 11 and ord(data[6:7]) == 4:
                 #fields['unix_gid'] = struct.unpack("<I",data[7:11])[0]
                 tuples.append(('unix_gid', struct.unpack("<I",data[7:11])[0]))
                 tokens.append((binascii.hexlify(data[7:11])))
     if type == "d935":
         if data_len >= 2:
             #fields['andriod_alignment'] = ord(data[0])
-            tuples.append(('andriod_alignment', ord(data[0])))
-            tokens.append((binascii.hexlify(data[0])))
+            tuples.append(('andriod_alignment', ord(data[0:1])))
+            tokens.append((binascii.hexlify(data[0:1])))
             #fields['andriod_padding'] = data_len
             tuples.append(('andriod_padding_length', data_len))
             tokens.append((binascii.hexlify(data[1:])))
     if type == "a220":
-        if data_len >= 4 and data[0:2] == "\x28\xa0":
+        if data_len >= 4 and data[0:2] == b"\x28\xa0":
             tuples.append(("ms_pad_sig",binascii.hexlify(data[0:2])))
             tokens.append((binascii.hexlify(data[0:2])))
             #fields['ms_pad_value'] = struct.unpack("<H",data[2:4])[0]
@@ -813,19 +793,19 @@ def parse_extra_data(data, type):
             tuples.append(("aes_vendor", data[2:4]))
             tokens.append((binascii.hexlify(data[2:4])))
             #fields["strength"] = None
-            if ord(data[4]) == 0x01:
+            if ord(data[4:5]) == 0x01:
                 #fields["strength"] = 128
                 tuples.append(("aes_strength", 128))
-            elif ord(data[4]) == 0x02:
+            elif ord(data[4:5]) == 0x02:
                 #fields["strength"] = 192
                 tuples.append(("aes_strength", 192))
-            elif ord(data[4]) == 0x03:
+            elif ord(data[4:5]) == 0x03:
                 #fields["strength"] = 256
                 tuples.append(("aes_strength", 256))
             else:
                 #fields["strength"] = "unknown%i" % (ord(data[4]))
-                tuples.append(("aes_strength", "unknown%i" % (ord(data[4]))))
-            tokens.append((binascii.hexlify(data[4])))
+                tuples.append(("aes_strength", "unknown%i" % (ord(data[4:5]))))
+            tokens.append((binascii.hexlify(data[4:5])))
             #fields["method"] = label_method(struct.unpack("<H",data[5:7])[0])
             tuples.append(("aes_method", label_method(struct.unpack("<H",data[5:7])[0])))
             tokens.append((binascii.hexlify(data[5:7])))
@@ -945,7 +925,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
             for entry in entries:
                 if entry.flag_bits & 0x0001:
                     #handle encrypted
-                    decompressed_files.append("")
+                    decompressed_files.append(b"")
                     decompress_errors.append("")
                     decompressed_CRCs.append(0)
                 else:
@@ -953,7 +933,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
                         decompressed_data = z.open(entry).read()
                         decompress_errors.append("")
                     except Exception as e:
-                        decompressed_data = ""
+                        decompressed_data = b""
                         decompress_errors.append(str(e))
                     decompressed_files.append(decompressed_data)
                     decompressed_CRCs.append(zlib.crc32(decompressed_data) & 0xffffffff)
@@ -996,7 +976,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
         file['volume'] = entry.volume      
         file['int_attr_raw'] = entry.internal_attr
         file['ext_attr_raw'] = entry.external_attr
-        if type(entry.filename) == str:
+        if isinstance(entry.filename, bytes):
             if file['flags_raw'] & 0x800:
                 file['filename'] = entry.filename.decode("utf-8", errors="replace")
             else:
@@ -1031,7 +1011,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
             f.seek(cd_start + 46 + fname_len + extra_len + comment_len)
             file['end'] = f.tell()
             magic = f.read(4)
-            if magic == "PK\x01\x02":
+            if magic == b"PK\x01\x02":
                 cd_start = f.tell() - 4
             else:
                 cd_start = None
@@ -1081,7 +1061,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
             if extra_len:
                 extra = f.read(extra_len)
             else:
-                extra = ""
+                extra = b""
             file['l_extra_types'], file['l_extra_values'], file['l_extra_tokens'], file['l_extra_gap'] = parse_extra_field(extra)
 
             #does this need adjusted in event of zip64?
@@ -1103,7 +1083,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
                                 
                 data = f.read(4)
                 #check for signature
-                if  data == "PK\x07\x08":
+                if  data == b"PK\x07\x08":
                     file['desc_sig'] = 1
                     data = f.read(4)
                 else:
@@ -1196,7 +1176,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
         the starting disk number        8 bytes
         zip64 extensible data sector    (variable size)
     '''
-    if magic == "PK\x06\x06":
+    if magic == b"PK\x06\x06":
         end_dir64 = {}
         end_dir64['end_dir64_offset'] = f.tell() - 4
         end_dir64_stuct = "<QBBHLLQQQQ"
@@ -1224,7 +1204,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
       total number of disks           4 bytes
     '''
     
-    if magic == "PK\x06\x07":
+    if magic == b"PK\x06\x07":
         loc_dir64 = {}
         loc_dir64['loc_dir64_offset'] = f.tell() - 4
         loc_dir64_stuct = "<LQL"
@@ -1252,7 +1232,7 @@ def parse_zip(f, decompress_files=False, derive_deflate_level=False):
       .ZIP file comment length        2 bytes
       .ZIP file comment       (variable size)
     '''
-    if magic == "PK\x05\x06":
+    if magic == b"PK\x05\x06":
         end_directory = {}
         end_directory['end_dir_offset'] = f.tell() - 4
         end_directory_stuct = "<HHHHLLH"
@@ -1311,7 +1291,7 @@ def main():
     
     for filename in args.filename:
         try:
-            with open(filename, "rb") as f:
+            with open(filename, "r") as f:
                 archive = parse_zip(f, decompress_files=args.decompress, derive_deflate_level=args.deflate)
                 
                 archive['filename'] = filename    
@@ -1429,15 +1409,15 @@ def main():
                     
                     if args.verbosity >= 2:
                         if 'end_dir64' in archive:
-                            print("end of directory 64: %s" % (format_extra(filter_dict(archive['end_dir64'], ["disk_num", "create_ver", "create_sys", "extract_ver", "num_entries_disk", "num_entries", "disk_num_dir", "extra"]).items(), prune=False)))
+                            print("end of directory 64: %s" % (format_extra(list(filter_dict(archive['end_dir64'], ["disk_num", "create_ver", "create_sys", "extract_ver", "num_entries_disk", "num_entries", "disk_num_dir", "extra"]).items()), prune=False)))
                             if args.verbosity >= 4:
                                 print("  "+"\n  ".join(hexdump(f, archive['end_dir64']['end_dir64_offset'], archive['end_dir64']['end_dir64_end'])))
                         if 'loc_dir64' in archive:
-                            print("end of directory 64 locator: %s" % (format_extra(filter_dict(archive['loc_dir64'], ["disk_num_end_dir64", "end_dir64_offset", "num_disks"]).items(), prune=False)))
+                            print("end of directory 64 locator: %s" % (format_extra(list(filter_dict(archive['loc_dir64'], ["disk_num_end_dir64", "end_dir64_offset", "num_disks"]).items()), prune=False)))
                             if args.verbosity >= 4:
                                 print("  "+"\n  ".join(hexdump(f, archive['loc_dir64']['loc_dir64_offset'], archive['loc_dir64']['loc_dir64_end'])))                    
                         if 'end_dir' in archive:
-                            print("end of directory: %s" % (format_extra(filter_dict(archive['end_dir'], ["disk_num", "num_entries_disk", "num_entries", "disk_num_dir", "comment"]).items(), prune=False)))
+                            print("end of directory: %s" % (format_extra(list(filter_dict(archive['end_dir'], ["disk_num", "num_entries_disk", "num_entries", "disk_num_dir", "comment"]).items()), prune=False)))
                             if args.verbosity >= 4:
                                 print("  "+"\n  ".join(hexdump(f, archive['end_dir']['end_dir_offset'], archive['end_dir']['end_dir_end'])))       
 
@@ -1445,6 +1425,13 @@ def main():
                         print("comment: %s" % (archive['comment']))
         except Exception as e:
             sys.stderr.write("error in " + filename + ":\n" + traceback.format_exc() + "\n")
+                
+                
+            
+            
+                    
+                    
+        
 
 
 if __name__ == "__main__":
