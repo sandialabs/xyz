@@ -8,8 +8,4 @@ Key benefits:
 - dump hex strings in format aiding signature writing and understanding file format
 - source code includes references to zip file format specification
 
-designed to be run under python 2 (and relies on python 2 zip libaries for basic parsing)
-
-## License ##
-
-MIT
+XYZ is now distributed as part of laikaboss: https://github.com/sandialabs/laikaboss.
